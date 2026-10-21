@@ -11,7 +11,11 @@ type Client struct {
 	HTTP *http.Client
 }
 
-var errNoModuleRegistryHost = errors.New("no module registry host specified")
+var (
+	errNoModuleRegistryHost = errors.New("no module registry host specified")
+	errProviderNotFound     = errors.New("provider not found in registry.terraform.io")
+	errUnexpectedStatus     = errors.New("unexpected HTTP status")
+)
 
 // DiscoverModules obtains the module index base URL for the given hostname.
 // ref.: https://www.terraform.io/docs/registry/api.html#service-discovery
@@ -76,6 +80,9 @@ func (c *Client) DiscoverProviders(namespace, name string) (string, error) {
 		return "", fmt.Errorf("GET %q: %w", url, err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GET %q: %w: %s", url, errUnexpectedStatus, resp.Status)
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return "", fmt.Errorf("decode provider registry response: %w", err)
 	}

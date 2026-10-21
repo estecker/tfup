@@ -29,16 +29,7 @@ func Registry(client registry.Client, hostname, namespace, name, provider string
 	if err != nil {
 		return nil, fmt.Errorf("list versions: %w", err)
 	}
-	out := make([]*goversion.Version, len(versions))
-	for i, versionString := range versions {
-		version, err := goversion.NewVersion(versionString)
-		if err != nil {
-			version = nil
-		}
-		out[i] = version
-	}
-	sort.Sort(goversion.Collection(out))
-	return out, nil
+	return parseVersions(versions), nil
 }
 
 func RegistryProvider(client registry.Client, namespace, name string) ([]*goversion.Version, error) {
@@ -50,14 +41,20 @@ func RegistryProvider(client registry.Client, namespace, name string) ([]*govers
 	if err != nil {
 		return nil, fmt.Errorf("list provider versions: %w", err)
 	}
-	out := make([]*goversion.Version, len(versions))
-	for i, versionString := range versions {
-		version, err := goversion.NewVersion(versionString)
+	return parseVersions(versions), nil
+}
+
+// parseVersions parses and sorts version strings, skipping invalid ones
+// (nil entries would panic during sort/compare).
+func parseVersions(versionStrings []string) []*goversion.Version {
+	out := make([]*goversion.Version, 0, len(versionStrings))
+	for _, s := range versionStrings {
+		v, err := goversion.NewVersion(s)
 		if err != nil {
-			version = nil
+			continue
 		}
-		out[i] = version
+		out = append(out, v)
 	}
 	sort.Sort(goversion.Collection(out))
-	return out, nil
+	return out
 }
